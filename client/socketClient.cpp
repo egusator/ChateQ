@@ -11,7 +11,7 @@
 
 	int main(int argc, char *argv[]) {
 	int sockfd = 0;
-	long int n = 0;
+	int r = 0, s = 0;
 	char recvBuff[1024];
 	char sendBuff[1025];
 	struct sockaddr_in serv_addr;
@@ -26,9 +26,9 @@
 		return 1;
 	}
 
-	memset(sendBuff, '0', sizeof(sendBuff));
-	memset(recvBuff, '0', sizeof(recvBuff));
-	memset(&serv_addr, '0', sizeof(serv_addr));
+
+
+	memset(&serv_addr, '\0', sizeof(serv_addr));
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(atoi(argv[2]));
@@ -43,22 +43,33 @@
 		return 1;
 	}
 	while (1) {
-		char *sBuff;
+		memset(sendBuff, '\0', sizeof(sendBuff));
 		int i = 0;
 		char c;
 		while ((c = getchar())!= '\n'){
-			sBuff[i++] = c;
-		} c[i++]
-		send(sockfd, sBuff, sizeof(sBuff), 0);
-		n = recv(sockfd, recvBuff, sizeof(recvBuff) - 1, 0);
-		printf("MESSAGE WAITING");
+			sendBuff[i++] = c;
+		}
+		sendBuff[i++] = '\n';
+		sendBuff[i] = '\0';
+		if (strlen(sendBuff))
+			s = send(sockfd, sendBuff, sizeof(sendBuff), 0);
+		if (s < 0) break;
+
+		memset(recvBuff, '\0', sizeof(recvBuff));
+		r = recv(sockfd, recvBuff, sizeof(recvBuff) - 1, 0);
+		if (r < 0) break;
+
 		if (fputs(recvBuff, stdout) == EOF) {
 			printf("\n Error : Fputs error\n");
+			break;
 		}
 
 	}
+	if (s < 0) {
+		printf("\n Send error  \n");
+	}
 
-	if (n < 0) {
+	if (r < 0) {
 		printf("\n Read error \n");
 	}
 

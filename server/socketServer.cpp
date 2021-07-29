@@ -10,6 +10,7 @@ int main()
     int sock, listener;
     struct sockaddr_in addr;
     char buf[1024];
+    char sBuff[1024];
     int bytes_read;
 
     listener = socket(AF_INET, SOCK_STREAM, 0);
@@ -49,16 +50,24 @@ int main()
 
         while(1)
         {
-            bytes_read = recv(sock, buf, 1024, 0);
+        	memset(buf, '\0', sizeof(buf));
+            bytes_read = recv(sock, buf,1024, 0);
             if(bytes_read <= 0) break;
-            buf[bytes_read] = '\0';
-            char sBuff[10240];
+
+            memset(sBuff, '\0', sizeof(sBuff));
+            if (strlen(buf)){
             sprintf(sBuff, "ECHO: %s", buf);
-            printf("Recieved message: %s", buf);
+            printf("Received message: %s", buf);
+            }
+            if (strlen(sBuff))
             send(sock, sBuff, strlen(sBuff), 0);
             sleep(1);
         }
-
+        if (bytes_read < 0) {
+        	printf("\n Read error \n");
+        }	else if (bytes_read == 0) {
+        	printf(" \n Received EOF symbol(client has ended connection) \n");
+        }
         close(sock);
     }
 
