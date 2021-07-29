@@ -9,8 +9,9 @@
 #include <errno.h>
 #include <arpa/inet.h> 
 
-int main(int argc, char *argv[]) {
-	int sockfd = 0, n = 0;
+	int main(int argc, char *argv[]) {
+	int sockfd = 0;
+	long int n = 0;
 	char recvBuff[1024];
 	char sendBuff[1025];
 	struct sockaddr_in serv_addr;
@@ -41,9 +42,16 @@ int main(int argc, char *argv[]) {
 		printf("\n Error : Connect Failed \n");
 		return 1;
 	}
-
-	while ((n = read(sockfd, recvBuff, sizeof(recvBuff) - 1)) > 0) {
-		recvBuff[n] = 0;
+	while (1) {
+		char *sBuff;
+		int i = 0;
+		char c;
+		while ((c = getchar())!= '\n'){
+			sBuff[i++] = c;
+		} c[i++]
+		send(sockfd, sBuff, sizeof(sBuff), 0);
+		n = recv(sockfd, recvBuff, sizeof(recvBuff) - 1, 0);
+		printf("MESSAGE WAITING");
 		if (fputs(recvBuff, stdout) == EOF) {
 			printf("\n Error : Fputs error\n");
 		}
