@@ -1,75 +1,185 @@
+//Example code: A simple server side code, which echos back the received message.
+//Handle multiple socket connections with select and fd_set on Linux
 #include <stdio.h>
+#include <string.h>   //strlen
 #include <stdlib.h>
-#include <unistd.h>
+#include <errno.h>
+#include <unistd.h>   //close
+#include <arpa/inet.h>    //close
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
-int main()
-{
-    int sock, listener;
-    struct sockaddr_in addr;
-    char buf[1024];
-    char sBuff[1024];
-    int bytes_read;
+#include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros
 
-    listener = socket(AF_INET, SOCK_STREAM, 0);
-    if(listener < 0)
-    {
-        perror("socket");
-        exit(1);
-    }
+#define TRUE   1
+#define FALSE  0
+#define PORT 8888
 
-    int optval = 1;
+int main(int argc, char *argv[]) {
+	int opt = TRUE;
+	int master_socket, addrlen, new_socket, max_clients = 30, activity, i,
+			valread, sd;
+	int max_sd;
+	struct sockaddr_in address;
+	struct client {
+		int socket;
+		char name[1025];
+	} Client[max_clients];
 
-    if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (void*)&optval, sizeof(int)) < 0){
-        perror("setsockopt(SO_REUSEADDR) failed");
-        exit(3);
-    }
+	char buffer[1025];  //data buffer of 1K
 
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(3425);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    if(bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        perror("bind");
-        exit(2);
-    }
+	//set of socket descriptors
+	fd_set readfds;
 
-    listen(listener, 1);
+	//a message
+	char *message = "Chateq v0.0.0.01 \r\n \n \n ur name: \n ";
 
+	//initialise all client_socket[] to 0 so not checked
+	for (i = 0; i < max_clients; i++) {
+		Client[i].socket = 0;
+	}
 
-    while(1)
-    {
-        sock = accept(listener, NULL, NULL);
-        if(sock < 0)
-        {
-            perror("accept");
-            exit(3);
-        }
+	//create a master socket
+	if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+		perror("socket failed");
+		exit(EXIT_FAILURE);
+	}
 
-        while(1)
-        {
-        	memset(buf, '\0', sizeof(buf));
-            bytes_read = recv(sock, buf,1024, 0);
-            if(bytes_read <= 0) break;
+	//set master socket to allow multiple connections ,
+	//this is just a good habit, it will work without this
+	if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char*) &opt,
+			sizeof(opt)) < 0) {
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	}
 
-            memset(sBuff, '\0', sizeof(sBuff));
-            if (strlen(buf)){
-            sprintf(sBuff, "ECHO: %s", buf);
-            printf("Received message: %s", buf);
-            }
-            if (strlen(sBuff))
-            send(sock, sBuff, strlen(sBuff), 0);
-            sleep(1);
-        }
-        if (bytes_read < 0) {
-        	printf("\n Read error \n");
-        }	else if (bytes_read == 0) {
-        	printf(" \n Received EOF symbol(client has ended connection) \n");
-        }
-        close(sock);
-    }
+	//type of socket created
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = INADDR_ANY;
+	address.sin_port = htons( PORT);
 
-    return 0;
+	//bind the socket to localhost port 8888
+	if (bind(master_socket, (struct sockaddr*) &address, sizeof(address)) < 0) {
+		perror("bind failed");
+		exit(EXIT_FAILURE);
+	}
+	printf("Listener on port %d \n", PORT);
+
+	//try to specify maximum of 3 pending connections for the master socket
+	if (listen(master_socket, 3) < 0) {
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
+
+	//accept the incoming connection
+	addrlen = sizeof(address);
+	puts("Waiting for connections ...");
+
+	while (TRUE) {
+		//clear the socket set
+		FD_ZERO(&readfds);
+
+		//add master socket to set
+		FD_SET(master_socket, &readfds);
+		max_sd = master_socket;
+
+		//add child sockets to set
+		for (i = 0; i < max_clients; i++) {
+			//socket descriptor
+			sd = Client[i].socket;
+
+			//if valid socket descriptor then add to read list
+			if (sd > 0)
+				FD_SET(sd, &readfds);
+
+			//highest file descriptor number, need it for the select function
+			if (sd > max_sd)
+				max_sd = sd;
+		}
+
+		//wait for an activity on one of the sockets , timeout is NULL ,
+		//so wait indefinitely
+		activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+
+		if ((activity < 0) && (errno != EINTR)) {
+			printf("select error");
+		}
+
+		//If something happened on the master socket ,
+		//then its an incoming connection
+		if (FD_ISSET(master_socket, &readfds)) {
+			if ((new_socket = accept(master_socket, (struct sockaddr*) &address,
+					(socklen_t*) &addrlen)) < 0) {
+				perror("accept");
+				exit(EXIT_FAILURE);
+			}
+
+			//inform user of socket number - used in send and receive commands
+			printf(
+					"New connection , socket fd is %d , ip is : %s , port : %d \n",
+					new_socket, inet_ntoa(address.sin_addr),
+					ntohs(address.sin_port));
+
+			//send new connection greeting message
+			if (send(new_socket, message, strlen(message), 0)
+					!= strlen(message)) {
+				perror("send");
+			}
+			puts("Welcome message sent successfully");
+
+			//add new socket to array of sockets
+			for (i = 0; i < max_clients; i++) {
+				//if position is empty
+				if (Client[i].socket == 0) {
+					Client[i].socket = new_socket;
+					read(Client[i].socket, Client[i].name, 1024);
+					printf("Adding to list of sockets as %d\n", i);
+
+					break;
+				}
+			}
+		}
+
+		//else its some IO operation on some other socket
+		for (i = 0; i < max_clients; i++) {
+			sd = Client[i].socket;
+
+			if (FD_ISSET(sd, &readfds)) {
+				//Check if it was for closing , and also read the
+				//incoming message
+				if ((valread = read(sd, buffer, 1024)) == 0) {
+					//Somebody disconnected , get his details and print
+					getpeername(sd, (struct sockaddr*) &address,
+							(socklen_t*) &addrlen);
+					printf("Host disconnected , ip %s , port %d \n",
+							inet_ntoa(address.sin_addr),
+							ntohs(address.sin_port));
+
+					//Close the socket and mark as 0 in list for reuse
+					close(sd);
+					Client[i].socket = 0;
+				}
+				//Echo back the message that came in
+				else {
+					//set the string terminating NULL byte on the end
+					//of the data read
+
+					char message[1025], name[50];
+					for (i = 0; i < max_clients; i++)
+						if (Client[i].socket == sd) {
+							for (int j = 0; j < max_clients; j++) {
+								if (i != j) {
+									sprintf(message, "%s: %s  \n\0", Client[i].name, buffer);
+									send(Client[j].socket, message, strlen(message), 0);
+								}
+							}
+
+						}
+
+				}
+			}
+		}
+	}
+
+	return 0;
 }

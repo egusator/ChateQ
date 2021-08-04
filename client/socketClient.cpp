@@ -49,8 +49,6 @@
 		while ((c = getchar())!= '\n'){
 			sendBuff[i++] = c;
 		}
-		sendBuff[i++] = '\n';
-		sendBuff[i] = '\0';
 		if (strlen(sendBuff))
 			s = send(sockfd, sendBuff, sizeof(sendBuff), 0);
 		if (s < 0) break;
