@@ -43,24 +43,23 @@
 		return 1;
 	}
 	while (1) {
+
+		memset(recvBuff, '\0', sizeof(recvBuff));
+
+		r = recv(sockfd, recvBuff, sizeof(recvBuff) - 1, 0);
+
+		if (r < 0) break;
+		fputs(recvBuff, stdout);
+
 		memset(sendBuff, '\0', sizeof(sendBuff));
 		int i = 0;
-		char c;
-		while ((c = getchar())!= '\n'){
-			sendBuff[i++] = c;
+		if(fgets(sendBuff, 1024, stdin)<=0){
+			printf("\n FGETS ERROR");
 		}
+
 		if (strlen(sendBuff))
 			s = send(sockfd, sendBuff, sizeof(sendBuff), 0);
 		if (s < 0) break;
-
-		memset(recvBuff, '\0', sizeof(recvBuff));
-		r = recv(sockfd, recvBuff, sizeof(recvBuff) - 1, 0);
-		if (r < 0) break;
-
-		if (fputs(recvBuff, stdout) == EOF) {
-			printf("\n Error : Fputs error\n");
-			break;
-		}
 
 	}
 	if (s < 0) {

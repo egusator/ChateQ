@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	fd_set readfds;
 
 	//a message
-	char *message = "Chateq v0.0.0.01 \r\n \n \n ur name: \n ";
+	char *message = "Chateq v0.0.0.01 \nur name: \n ";
 
 	//initialise all client_socket[] to 0 so not checked
 	for (i = 0; i < max_clients; i++) {
@@ -133,8 +133,9 @@ int main(int argc, char *argv[]) {
 				if (Client[i].socket == 0) {
 					Client[i].socket = new_socket;
 					read(Client[i].socket, Client[i].name, 1024);
-					printf("Adding to list of sockets as %d\n", i);
-
+					printf("Adding to list of sockets as %d and his name is %s \n", i, Client[i].name);
+					sprintf(buffer, "Nice to meet you, %s. Welcome!", Client[i].name);
+					send(Client[i].socket, buffer, sizeof(buffer), 0);
 					break;
 				}
 			}
@@ -143,7 +144,7 @@ int main(int argc, char *argv[]) {
 		//else its some IO operation on some other socket
 		for (i = 0; i < max_clients; i++) {
 			sd = Client[i].socket;
-
+			memset(buffer,'\0' ,sizeof(buffer));
 			if (FD_ISSET(sd, &readfds)) {
 				//Check if it was for closing , and also read the
 				//incoming message
@@ -165,12 +166,14 @@ int main(int argc, char *argv[]) {
 					//of the data read
 
 					char message[1025], name[50];
-					for (i = 0; i < max_clients; i++)
+					for (i = 0; (i < max_clients); i++)
 						if (Client[i].socket == sd) {
 							for (int j = 0; j < max_clients; j++) {
 								if (i != j) {
+									if (strlen(buffer)>0) {
 									sprintf(message, "%s: %s  \n\0", Client[i].name, buffer);
 									send(Client[j].socket, message, strlen(message), 0);
+									}
 								}
 							}
 
