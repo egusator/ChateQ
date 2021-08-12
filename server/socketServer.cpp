@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	fd_set readfds;
 
 	//a message
-	char *message = "Chateq v0.0.0.01 \nur name: \n ";
+	char *message = "Chateq v0.0.0.01\n";
 
 	//initialise all client_socket[] to 0 so not checked
 	for (i = 0; i < max_clients; i++) {
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 					Client[i].socket = new_socket;
 					read(Client[i].socket, Client[i].name, 1024);
 					printf("Adding to list of sockets as %d and his name is %s \n", i, Client[i].name);
-					sprintf(buffer, "Nice to meet you, %s. Welcome!", Client[i].name);
+
 					send(Client[i].socket, buffer, sizeof(buffer), 0);
 					break;
 				}
@@ -182,6 +182,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
+
 	}
 
 	return 0;

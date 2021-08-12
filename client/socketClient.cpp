@@ -11,13 +11,14 @@
 
 	int main(int argc, char *argv[]) {
 	int sockfd = 0;
-	int r = 0, s = 0;
-	char recvBuff[1024];
-	char sendBuff[1025];
+	int r = 0, s = 0, i = 0, f = 0;
+	char buffer[1025];
+	char name[1025];
+	memset(name, '\0', 1025);
 	struct sockaddr_in serv_addr;
 
-	if (argc != 3) {
-		printf("\n Usage: %s <ip of server> <port> \n", argv[0]);
+	if (argc != 4) {
+		printf("\n Usage: %s <ip of server> <port> <your name> \n", argv[0]);
 		return 1;
 	}
 
@@ -42,24 +43,20 @@
 		printf("\n Error : Connect Failed \n");
 		return 1;
 	}
+	strcpy(name, argv[3]);
+
+	send(sockfd, name, 1025, 0);
+
 	while (1) {
 
-		memset(recvBuff, '\0', sizeof(recvBuff));
+		memset(buffer, '\0', 1025);
+		recv(sockfd, buffer, 1025, 0);
+		printf("\n %s \n", buffer);грац диджей плаг
+		printf("%s(you):", name);
 
-		r = recv(sockfd, recvBuff, sizeof(recvBuff) - 1, 0);
-
-		if (r < 0) break;
-		fputs(recvBuff, stdout);
-
-		memset(sendBuff, '\0', sizeof(sendBuff));
-		int i = 0;
-		if(fgets(sendBuff, 1024, stdin)<=0){
-			printf("\n FGETS ERROR");
-		}
-
-		if (strlen(sendBuff))
-			s = send(sockfd, sendBuff, sizeof(sendBuff), 0);
-		if (s < 0) break;
+		memset(buffer, '\0', 1025);
+		fgets(buffer, 1025, stdin);
+		send(sockfd, buffer, 1025, 0);
 
 	}
 	if (s < 0) {
